@@ -204,7 +204,7 @@ const AboutPage = () => {
                   <div className='w-10 h-10 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-full border-2 border-white dark:border-gray-800'></div>
                 </div>
                 <div className='text-sm text-gray-600 dark:text-gray-400'>
-                  <div className='font-semibold'>Trusted by 10,000+ users</div>
+                  <div className='font-semibold'>Trusted by our amazing users</div>
                   <div>Join our growing community</div>
                 </div>
               </div>
@@ -215,7 +215,7 @@ const AboutPage = () => {
                 <div className='flex items-center gap-4'>
                   <div className='w-3 h-3 bg-emerald-500 dark:bg-emerald-400 rounded-full'></div>
                   <div className='text-gray-900 dark:text-gray-100 font-medium'>
-                    Founded in 2024
+                    Founded in 2025
                   </div>
                 </div>
                 <div className='flex items-center gap-4'>
@@ -272,7 +272,7 @@ const AboutPage = () => {
               className='group relative overflow-hidden bg-gradient-to-r from-emerald-600 via-green-500 to-teal-500 hover:from-emerald-700 hover:via-green-600 hover:to-teal-600 text-white px-8 py-4 rounded-2xl font-bold shadow-2xl hover:shadow-3xl transition-all duration-200 transform hover:-translate-y-0.5'
             >
               <span className='relative z-10 flex items-center gap-2'>
-                Get Started Free
+                Its COMPLETELY FREE!
                 <span className='text-lg'>→</span>
               </span>
               <div className='absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200'></div>
