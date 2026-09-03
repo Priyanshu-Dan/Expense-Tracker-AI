@@ -69,6 +69,8 @@ export async function generateExpenseInsights(
 
     let completion;
     let retries = 3;
+    let response = '';
+
     while (retries > 0) {
       try {
         completion = await openai.chat.completions.create({
@@ -87,20 +89,31 @@ export async function generateExpenseInsights(
           temperature: 0.7,
           max_tokens: 1000,
         });
-        break; // Success! Exit loop.
+
+        response = completion?.choices?.[0]?.message?.content || '';
+        if (response.trim()) {
+          break; // Success! We have content. Exit loop.
+        }
+        
+        // If response is empty, treat it as a failure and retry
+        throw new Error('Empty response content from AI');
       } catch (err: unknown) {
         const error = err as { status?: number };
-        if (error?.status === 429 && retries > 1) {
-          retries--;
-          // Wait 2 seconds before retrying (bypasses concurrency limits)
+        retries--;
+        
+        if (retries > 0) {
+          // Wait 2 seconds before retrying
           await new Promise(resolve => setTimeout(resolve, 2000));
         } else {
+          // Out of retries, throw the last error
+          if (err instanceof Error && err.message === 'Empty response content from AI') {
+            throw new Error('No response from AI after multiple attempts.');
+          }
           throw err;
         }
       }
     }
 
-    const response = completion?.choices[0].message.content;
     if (!response) {
       throw new Error('No response from AI');
     }
@@ -230,6 +243,8 @@ export async function generateAIAnswer(
 
     let completion;
     let retries = 3;
+    let response = '';
+
     while (retries > 0) {
       try {
         completion = await openai.chat.completions.create({
@@ -248,19 +263,31 @@ export async function generateAIAnswer(
           temperature: 0.7,
           max_tokens: 200,
         });
-        break;
+
+        response = completion?.choices?.[0]?.message?.content || '';
+        if (response.trim()) {
+          break; // Success! We have content.
+        }
+
+        // If response is empty, treat it as a failure and retry
+        throw new Error('Empty response content from AI');
       } catch (err: unknown) {
         const error = err as { status?: number };
-        if (error?.status === 429 && retries > 1) {
-          retries--;
+        retries--;
+        
+        if (retries > 0) {
+          // Wait 2 seconds before retrying
           await new Promise(resolve => setTimeout(resolve, 2000));
         } else {
+          // Out of retries, throw the last error
+          if (err instanceof Error && err.message === 'Empty response content from AI') {
+            throw new Error('No response from AI after multiple attempts.');
+          }
           throw err;
         }
       }
     }
 
-    const response = completion?.choices[0].message.content;
     if (!response) {
       throw new Error('No response from AI');
     }
