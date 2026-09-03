@@ -27,10 +27,39 @@ export interface AIInsight {
   confidence: number;
 }
 
+// ============================================================
+// In-memory cache to reduce API calls
+// ============================================================
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+// Cache insights for 15 minutes — no need to re-analyze on every page load
+const INSIGHTS_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+let insightsCache: CacheEntry<AIInsight[]> | null = null;
+
+// Cache category suggestions — same description always gets the same category
+const categoryCache = new Map<string, string>();
+const MAX_CATEGORY_CACHE_SIZE = 100;
+
+// Cache AI answers — same question doesn't need to be asked twice
+const answerCache = new Map<string, string>();
+const MAX_ANSWER_CACHE_SIZE = 50;
+
+// ============================================================
+
 export async function generateExpenseInsights(
   expenses: ExpenseRecord[]
 ): Promise<AIInsight[]> {
   try {
+    // Check cache first — return cached insights if still fresh
+    if (insightsCache && Date.now() - insightsCache.timestamp < INSIGHTS_CACHE_TTL) {
+      console.log('✅ Returning cached AI insights');
+      return insightsCache.data;
+    }
+
     // Prepare expense data for AI analysis
     const expensesSummary = expenses.map((expense) => ({
       amount: expense.amount,
@@ -60,7 +89,7 @@ export async function generateExpenseInsights(
 
     Return only valid JSON array, no additional text.`;
 
-    let retries = 3;
+    let retries = 2; // Reduced from 3 to 2 to save API calls
     let responseText = '';
 
     while (retries > 0) {
@@ -74,19 +103,16 @@ export async function generateExpenseInsights(
 
         responseText = interaction.output_text || '';
         if (responseText.trim()) {
-          break; // Success! We have content. Exit loop.
+          break;
         }
         
-        // If response is empty, treat it as a failure and retry
         throw new Error('Empty response content from AI');
       } catch (err: unknown) {
         retries--;
         
         if (retries > 0) {
-          // Wait 2 seconds before retrying
           await new Promise(resolve => setTimeout(resolve, 2000));
         } else {
-          // Out of retries, throw the last error
           if (err instanceof Error && err.message === 'Empty response content from AI') {
             throw new Error('No response from AI after multiple attempts.');
           }
@@ -102,18 +128,15 @@ export async function generateExpenseInsights(
     // Clean the response by extracting the JSON array
     let cleanedResponse = responseText.trim();
     
-    // Find the first '[' and last ']' to extract the array
     const startIdx = cleanedResponse.indexOf('[');
     const endIdx = cleanedResponse.lastIndexOf(']');
     
     if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
       cleanedResponse = cleanedResponse.substring(startIdx, endIdx + 1);
     } else {
-      // If we can't find an array, throw a more descriptive error
       throw new Error(`AI returned invalid format. Received: ${cleanedResponse.substring(0, 50)}...`);
     }
 
-    // Parse AI response
     let insights;
     try {
       insights = JSON.parse(cleanedResponse);
@@ -126,7 +149,6 @@ export async function generateExpenseInsights(
       throw new Error('AI did not return an array of insights.');
     }
 
-    // Add IDs and ensure proper format
     const formattedInsights = insights.map(
       (insight: RawInsight, index: number) => ({
         id: `ai-${Date.now()}-${index}`,
@@ -138,11 +160,16 @@ export async function generateExpenseInsights(
       })
     );
 
+    // Store in cache
+    insightsCache = {
+      data: formattedInsights,
+      timestamp: Date.now(),
+    };
+
     return formattedInsights;
   } catch (error) {
     console.error('❌ Error generating AI insights:', error);
 
-    // Fallback to mock insights if AI fails
     return [
       {
         id: 'fallback-1',
@@ -158,6 +185,15 @@ export async function generateExpenseInsights(
 
 export async function categorizeExpense(description: string): Promise<string> {
   try {
+    // Normalize the description for cache lookup
+    const normalizedDesc = description.trim().toLowerCase();
+
+    // Check cache first
+    if (categoryCache.has(normalizedDesc)) {
+      console.log('✅ Returning cached category for:', normalizedDesc);
+      return categoryCache.get(normalizedDesc)!;
+    }
+
     const interaction = await client.interactions.create({
       model: 'gemini-3.7-flash',
       system_instruction:
@@ -180,6 +216,14 @@ export async function categorizeExpense(description: string): Promise<string> {
     const finalCategory = validCategories.includes(category || '')
       ? category!
       : 'Other';
+
+    // Store in cache (evict oldest if full)
+    if (categoryCache.size >= MAX_CATEGORY_CACHE_SIZE) {
+      const firstKey = categoryCache.keys().next().value;
+      if (firstKey) categoryCache.delete(firstKey);
+    }
+    categoryCache.set(normalizedDesc, finalCategory);
+
     return finalCategory;
   } catch (error) {
     console.error('❌ Error categorizing expense:', error);
@@ -192,6 +236,13 @@ export async function generateAIAnswer(
   context: ExpenseRecord[]
 ): Promise<string> {
   try {
+    // Check cache first
+    const cacheKey = question.trim().toLowerCase();
+    if (answerCache.has(cacheKey)) {
+      console.log('✅ Returning cached AI answer for:', cacheKey);
+      return answerCache.get(cacheKey)!;
+    }
+
     const expensesSummary = context.map((expense) => ({
       amount: expense.amount,
       category: expense.category,
@@ -212,7 +263,7 @@ export async function generateAIAnswer(
     
     Return only the answer text, no additional formatting.`;
 
-    let retries = 3;
+    let retries = 2; // Reduced from 3 to 2
     let responseText = '';
 
     while (retries > 0) {
@@ -226,19 +277,16 @@ export async function generateAIAnswer(
 
         responseText = interaction.output_text || '';
         if (responseText.trim()) {
-          break; // Success! We have content.
+          break;
         }
 
-        // If response is empty, treat it as a failure and retry
         throw new Error('Empty response content from AI');
       } catch (err: unknown) {
         retries--;
         
         if (retries > 0) {
-          // Wait 2 seconds before retrying
           await new Promise(resolve => setTimeout(resolve, 2000));
         } else {
-          // Out of retries, throw the last error
           if (err instanceof Error && err.message === 'Empty response content from AI') {
             throw new Error('No response from AI after multiple attempts.');
           }
@@ -251,9 +299,23 @@ export async function generateAIAnswer(
       throw new Error('No response from AI');
     }
 
-    return responseText.trim();
+    const trimmedResponse = responseText.trim();
+
+    // Store in cache (evict oldest if full)
+    if (answerCache.size >= MAX_ANSWER_CACHE_SIZE) {
+      const firstKey = answerCache.keys().next().value;
+      if (firstKey) answerCache.delete(firstKey);
+    }
+    answerCache.set(cacheKey, trimmedResponse);
+
+    return trimmedResponse;
   } catch (error) {
     console.error('❌ Error generating AI answer:', error);
     return `AI Answer Failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please tell your AI assistant this exact error message.`;
   }
+}
+
+// Helper to manually clear the insights cache (e.g., after adding a new expense)
+export function clearInsightsCache() {
+  insightsCache = null;
 }
