@@ -89,16 +89,15 @@ export async function generateExpenseInsights(
       throw new Error('No response from AI');
     }
 
-    // Clean the response by removing markdown code blocks if present
+    // Clean the response by extracting the JSON array
     let cleanedResponse = response.trim();
-    if (cleanedResponse.startsWith('```json')) {
-      cleanedResponse = cleanedResponse
-        .replace(/^```json\s*/, '')
-        .replace(/\s*```$/, '');
-    } else if (cleanedResponse.startsWith('```')) {
-      cleanedResponse = cleanedResponse
-        .replace(/^```\s*/, '')
-        .replace(/\s*```$/, '');
+    
+    // Find the first '[' and last ']' to extract the array
+    const startIdx = cleanedResponse.indexOf('[');
+    const endIdx = cleanedResponse.lastIndexOf(']');
+    
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      cleanedResponse = cleanedResponse.substring(startIdx, endIdx + 1);
     }
 
     // Parse AI response
