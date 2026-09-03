@@ -67,24 +67,39 @@ export async function generateExpenseInsights(
 
     Return only valid JSON array, no additional text.`;
 
-    const completion = await openai.chat.completions.create({
-      model: 'google/gemma-4-31b-it:free',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a financial advisor AI that analyzes spending patterns and provides actionable insights. Always respond with valid JSON only.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
-    });
+    let completion;
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        completion = await openai.chat.completions.create({
+          model: 'google/gemma-4-31b-it:free',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are a financial advisor AI that analyzes spending patterns and provides actionable insights. Always respond with valid JSON only.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 1000,
+        });
+        break; // Success! Exit loop.
+      } catch (err: any) {
+        if (err?.status === 429 && retries > 1) {
+          retries--;
+          // Wait 2 seconds before retrying (bypasses concurrency limits)
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          throw err;
+        }
+      }
+    }
 
-    const response = completion.choices[0].message.content;
+    const response = completion?.choices[0].message.content;
     if (!response) {
       throw new Error('No response from AI');
     }
@@ -199,24 +214,38 @@ export async function generateAIAnswer(
     
     Return only the answer text, no additional formatting.`;
 
-    const completion = await openai.chat.completions.create({
-      model: 'google/gemma-4-31b-it:free',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a helpful financial advisor AI that provides specific, actionable answers based on expense data. Be concise but thorough.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.7,
-      max_tokens: 200,
-    });
+    let completion;
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        completion = await openai.chat.completions.create({
+          model: 'google/gemma-4-31b-it:free',
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are a helpful financial advisor AI that provides specific, actionable answers based on expense data. Be concise but thorough.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 200,
+        });
+        break;
+      } catch (err: any) {
+        if (err?.status === 429 && retries > 1) {
+          retries--;
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          throw err;
+        }
+      }
+    }
 
-    const response = completion.choices[0].message.content;
+    const response = completion?.choices[0].message.content;
     if (!response) {
       throw new Error('No response from AI');
     }
