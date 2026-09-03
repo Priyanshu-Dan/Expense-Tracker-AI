@@ -88,8 +88,9 @@ export async function generateExpenseInsights(
           max_tokens: 1000,
         });
         break; // Success! Exit loop.
-      } catch (err: any) {
-        if (err?.status === 429 && retries > 1) {
+      } catch (err: unknown) {
+        const error = err as { status?: number };
+        if (error?.status === 429 && retries > 1) {
           retries--;
           // Wait 2 seconds before retrying (bypasses concurrency limits)
           await new Promise(resolve => setTimeout(resolve, 2000));
@@ -235,8 +236,9 @@ export async function generateAIAnswer(
           max_tokens: 200,
         });
         break;
-      } catch (err: any) {
-        if (err?.status === 429 && retries > 1) {
+      } catch (err: unknown) {
+        const error = err as { status?: number };
+        if (error?.status === 429 && retries > 1) {
           retries--;
           await new Promise(resolve => setTimeout(resolve, 2000));
         } else {
