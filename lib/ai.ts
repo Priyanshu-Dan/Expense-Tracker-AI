@@ -108,7 +108,7 @@ export async function generateExpenseInsights(
     const formattedInsights = insights.map(
       (insight: RawInsight, index: number) => ({
         id: `ai-${Date.now()}-${index}`,
-        type: insight.type || 'info',
+        type: (insight.type as 'warning' | 'info' | 'success' | 'tip') || 'info',
         title: insight.title || 'AI Insight',
         message: insight.message || 'Analysis complete',
         action: insight.action,
