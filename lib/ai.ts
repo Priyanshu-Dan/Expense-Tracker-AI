@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { GoogleGenAI } from '@google/genai';
 
 interface RawInsight {
   type?: string;
@@ -8,14 +8,7 @@ interface RawInsight {
   confidence?: number;
 }
 
-const openai = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-  defaultHeaders: {
-    'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-    'X-Title': 'ExpenseTracker AI',
-  },
-});
+const client = new GoogleGenAI({});
 
 export interface ExpenseRecord {
   id: string;
@@ -67,38 +60,26 @@ export async function generateExpenseInsights(
 
     Return only valid JSON array, no additional text.`;
 
-    let completion;
     let retries = 3;
-    let response = '';
+    let responseText = '';
 
     while (retries > 0) {
       try {
-        completion = await openai.chat.completions.create({
-          model: 'meta-llama/llama-3.1-8b-instruct:free',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are a financial advisor AI that analyzes spending patterns and provides actionable insights. Always respond with valid JSON only.',
-            },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: 0.7,
-          max_tokens: 1000,
+        const interaction = await client.interactions.create({
+          model: 'gemini-3.7-flash',
+          system_instruction:
+            'You are a financial advisor AI that analyzes spending patterns and provides actionable insights. Always respond with valid JSON only.',
+          input: prompt,
         });
 
-        response = completion?.choices?.[0]?.message?.content || '';
-        if (response.trim()) {
+        responseText = interaction.output_text || '';
+        if (responseText.trim()) {
           break; // Success! We have content. Exit loop.
         }
         
         // If response is empty, treat it as a failure and retry
         throw new Error('Empty response content from AI');
       } catch (err: unknown) {
-        const error = err as { status?: number };
         retries--;
         
         if (retries > 0) {
@@ -114,12 +95,12 @@ export async function generateExpenseInsights(
       }
     }
 
-    if (!response) {
+    if (!responseText) {
       throw new Error('No response from AI');
     }
 
     // Clean the response by extracting the JSON array
-    let cleanedResponse = response.trim();
+    let cleanedResponse = responseText.trim();
     
     // Find the first '[' and last ']' to extract the array
     const startIdx = cleanedResponse.indexOf('[');
@@ -177,24 +158,14 @@ export async function generateExpenseInsights(
 
 export async function categorizeExpense(description: string): Promise<string> {
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'meta-llama/llama-3.1-8b-instruct:free',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are an expense categorization AI. Categorize expenses into one of these categories: Food, Transportation, Entertainment, Shopping, Bills, Healthcare, Other. Respond with only the category name.',
-        },
-        {
-          role: 'user',
-          content: `Categorize this expense: "${description}"`,
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: 20,
+    const interaction = await client.interactions.create({
+      model: 'gemini-3.7-flash',
+      system_instruction:
+        'You are an expense categorization AI. Categorize expenses into one of these categories: Food, Transportation, Entertainment, Shopping, Bills, Healthcare, Other. Respond with only the category name.',
+      input: `Categorize this expense: "${description}"`,
     });
 
-    const category = completion.choices[0].message.content?.trim();
+    const category = interaction.output_text?.trim();
 
     const validCategories = [
       'Food',
@@ -241,38 +212,26 @@ export async function generateAIAnswer(
     
     Return only the answer text, no additional formatting.`;
 
-    let completion;
     let retries = 3;
-    let response = '';
+    let responseText = '';
 
     while (retries > 0) {
       try {
-        completion = await openai.chat.completions.create({
-          model: 'meta-llama/llama-3.1-8b-instruct:free',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are a helpful financial advisor AI that provides specific, actionable answers based on expense data. Be concise but thorough.',
-            },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: 0.7,
-          max_tokens: 200,
+        const interaction = await client.interactions.create({
+          model: 'gemini-3.7-flash',
+          system_instruction:
+            'You are a helpful financial advisor AI that provides specific, actionable answers based on expense data. Be concise but thorough.',
+          input: prompt,
         });
 
-        response = completion?.choices?.[0]?.message?.content || '';
-        if (response.trim()) {
+        responseText = interaction.output_text || '';
+        if (responseText.trim()) {
           break; // Success! We have content.
         }
 
         // If response is empty, treat it as a failure and retry
         throw new Error('Empty response content from AI');
       } catch (err: unknown) {
-        const error = err as { status?: number };
         retries--;
         
         if (retries > 0) {
@@ -288,13 +247,13 @@ export async function generateAIAnswer(
       }
     }
 
-    if (!response) {
+    if (!responseText) {
       throw new Error('No response from AI');
     }
 
-    return response.trim();
+    return responseText.trim();
   } catch (error) {
     console.error('❌ Error generating AI answer:', error);
-    return `AI Answer Failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please tell your AI assistant this exact error message.`;
+    return \`AI Answer Failed: \${error instanceof Error ? error.message : 'Unknown error'}. Please tell your AI assistant this exact error message.\`;
   }
 }
