@@ -114,10 +114,23 @@ export async function generateExpenseInsights(
     
     if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
       cleanedResponse = cleanedResponse.substring(startIdx, endIdx + 1);
+    } else {
+      // If we can't find an array, throw a more descriptive error
+      throw new Error(`AI returned invalid format. Received: ${cleanedResponse.substring(0, 50)}...`);
     }
 
     // Parse AI response
-    const insights = JSON.parse(cleanedResponse);
+    let insights;
+    try {
+      insights = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error('Failed to parse JSON:', cleanedResponse);
+      throw new Error('AI returned malformed JSON data.');
+    }
+
+    if (!Array.isArray(insights)) {
+      throw new Error('AI did not return an array of insights.');
+    }
 
     // Add IDs and ensure proper format
     const formattedInsights = insights.map(
