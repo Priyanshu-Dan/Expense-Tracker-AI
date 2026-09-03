@@ -123,12 +123,11 @@ export async function generateExpenseInsights(
     return [
       {
         id: 'fallback-1',
-        type: 'info',
-        title: 'AI Analysis Unavailable',
-        message:
-          'Unable to generate personalized insights at this time. Please try again later.',
-        action: 'Refresh insights',
-        confidence: 0.5,
+        type: 'warning',
+        title: 'AI Analysis Failed',
+        message: `Reason: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        action: 'Please let the AI assistant know this exact error',
+        confidence: 0,
       },
     ];
   }
@@ -225,6 +224,6 @@ export async function generateAIAnswer(
     return response.trim();
   } catch (error) {
     console.error('❌ Error generating AI answer:', error);
-    return "I'm unable to provide a detailed answer at the moment. Please try refreshing the insights or check your connection.";
+    return `AI Answer Failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please tell your AI assistant this exact error message.`;
   }
 }
