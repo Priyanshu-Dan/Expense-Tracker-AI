@@ -254,6 +254,6 @@ export async function generateAIAnswer(
     return responseText.trim();
   } catch (error) {
     console.error('❌ Error generating AI answer:', error);
-    return \`AI Answer Failed: \${error instanceof Error ? error.message : 'Unknown error'}. Please tell your AI assistant this exact error message.\`;
+    return `AI Answer Failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please tell your AI assistant this exact error message.`;
   }
 }
