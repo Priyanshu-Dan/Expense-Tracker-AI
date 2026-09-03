@@ -152,7 +152,7 @@ export async function generateExpenseInsights(
 export async function categorizeExpense(description: string): Promise<string> {
   try {
     const completion = await openai.chat.completions.create({
-      model: 'google/gemma-4-26b-a4b-it:free',
+      model: 'openrouter/free',
       messages: [
         {
           role: 'system',
