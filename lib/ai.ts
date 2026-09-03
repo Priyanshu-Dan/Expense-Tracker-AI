@@ -72,7 +72,7 @@ export async function generateExpenseInsights(
     while (retries > 0) {
       try {
         completion = await openai.chat.completions.create({
-          model: 'google/gemma-4-31b-it:free',
+          model: 'meta-llama/llama-3.1-8b-instruct:free',
           messages: [
             {
               role: 'system',
@@ -220,7 +220,7 @@ export async function generateAIAnswer(
     while (retries > 0) {
       try {
         completion = await openai.chat.completions.create({
-          model: 'google/gemma-4-31b-it:free',
+          model: 'meta-llama/llama-3.1-8b-instruct:free',
           messages: [
             {
               role: 'system',
