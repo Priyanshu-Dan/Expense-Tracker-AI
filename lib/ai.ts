@@ -27,10 +27,7 @@ export interface AIInsight {
   confidence: number;
 }
 
-// ============================================================
 // In-memory cache to reduce API calls
-// ============================================================
-
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
@@ -48,7 +45,6 @@ const MAX_CATEGORY_CACHE_SIZE = 100;
 const answerCache = new Map<string, string>();
 const MAX_ANSWER_CACHE_SIZE = 50;
 
-// ============================================================
 
 export async function generateExpenseInsights(
   expenses: ExpenseRecord[]
@@ -56,7 +52,7 @@ export async function generateExpenseInsights(
   try {
     // Check cache first — return cached insights if still fresh
     if (insightsCache && Date.now() - insightsCache.timestamp < INSIGHTS_CACHE_TTL) {
-      console.log('✅ Returning cached AI insights');
+      console.log('Returning cached AI insights');
       return insightsCache.data;
     }
 
@@ -89,13 +85,13 @@ export async function generateExpenseInsights(
 
     Return only valid JSON array, no additional text.`;
 
-    let retries = 2; // Reduced from 3 to 2 to save API calls
+    let retries = 2;
     let responseText = '';
 
     while (retries > 0) {
       try {
         const interaction = await client.interactions.create({
-          model: 'gemini-3.7-flash',
+          model: 'Gemini 3.5 Flash Lite',
           system_instruction:
             'You are a financial advisor AI that analyzes spending patterns and provides actionable insights. Always respond with valid JSON only.',
           input: prompt,
@@ -190,12 +186,12 @@ export async function categorizeExpense(description: string): Promise<string> {
 
     // Check cache first
     if (categoryCache.has(normalizedDesc)) {
-      console.log('✅ Returning cached category for:', normalizedDesc);
+      console.log('Returning cached category for:', normalizedDesc);
       return categoryCache.get(normalizedDesc)!;
     }
 
     const interaction = await client.interactions.create({
-      model: 'gemini-3.7-flash',
+      model: 'gemma-4-26b',
       system_instruction:
         'You are an expense categorization AI. Categorize expenses into one of these categories: Food, Transportation, Entertainment, Shopping, Bills, Healthcare, Other. Respond with only the category name.',
       input: `Categorize this expense: "${description}"`,
@@ -239,7 +235,7 @@ export async function generateAIAnswer(
     // Check cache first
     const cacheKey = question.trim().toLowerCase();
     if (answerCache.has(cacheKey)) {
-      console.log('✅ Returning cached AI answer for:', cacheKey);
+      console.log('Returning cached AI answer for:', cacheKey);
       return answerCache.get(cacheKey)!;
     }
 
@@ -263,13 +259,13 @@ export async function generateAIAnswer(
     
     Return only the answer text, no additional formatting.`;
 
-    let retries = 2; // Reduced from 3 to 2
+    let retries = 2;
     let responseText = '';
 
     while (retries > 0) {
       try {
         const interaction = await client.interactions.create({
-          model: 'gemini-3.7-flash',
+          model: 'Gemini 3.5 Flash Lite',
           system_instruction:
             'You are a helpful financial advisor AI that provides specific, actionable answers based on expense data. Be concise but thorough.',
           input: prompt,
@@ -315,7 +311,6 @@ export async function generateAIAnswer(
   }
 }
 
-// Helper to manually clear the insights cache (e.g., after adding a new expense)
 export function clearInsightsCache() {
   insightsCache = null;
 }
