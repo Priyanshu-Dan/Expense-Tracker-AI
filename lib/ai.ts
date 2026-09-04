@@ -91,7 +91,7 @@ export async function generateExpenseInsights(
     while (retries > 0) {
       try {
         const interaction = await client.interactions.create({
-          model: 'Gemini 3.5 Flash Lite',
+          model: 'gemini-3.5-flash-lite',
           system_instruction:
             'You are a financial advisor AI that analyzes spending patterns and provides actionable insights. Always respond with valid JSON only.',
           input: prompt,
@@ -191,7 +191,7 @@ export async function categorizeExpense(description: string): Promise<string> {
     }
 
     const interaction = await client.interactions.create({
-      model: 'gemma-4-26b',
+      model: 'gemini-3.5-flash-lite',
       system_instruction:
         'You are an expense categorization AI. Categorize expenses into one of these categories: Food, Transportation, Entertainment, Shopping, Bills, Healthcare, Other. Respond with only the category name.',
       input: `Categorize this expense: "${description}"`,
@@ -265,7 +265,7 @@ export async function generateAIAnswer(
     while (retries > 0) {
       try {
         const interaction = await client.interactions.create({
-          model: 'Gemini 3.5 Flash Lite',
+          model: 'gemini-3.5-flash-lite',
           system_instruction:
             'You are a helpful financial advisor AI that provides specific, actionable answers based on expense data. Be concise but thorough.',
           input: prompt,
